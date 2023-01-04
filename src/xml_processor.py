@@ -1,3 +1,4 @@
+import multiprocessing
 import xml.etree.ElementTree as Et
 from os import listdir
 
@@ -9,34 +10,38 @@ def get_filenames() -> None:
     filenames = []
     for f in listdir(path):
         if ".xml" in f:
-            filenames.append(f"{f}")
+            filenames.append(f"{path}{f}")
 
     if len(filenames) == 0:
         print("Drop xml files in the 'data' folder and try again")
         return
 
-    process_xml_data(path, filenames)
+    process_multi_files(filenames)
 
 
-def process_xml_data(path: str, filenames: [str]) -> None:
+def process_file(filename: str):
+    tree = Et.parse(filename)
+    root = tree.getroot()
+    type_dict: dict[str, str] = {}
+
+    for element in root:
+        is_duplicate, type_name = is_duplicate_type(element, type_dict)
+        if is_duplicate:
+            print("Duplicate class:", type_name)
+            continue
+
+        nominal_prop, min_prop = handle_sub_element(element)
+        if min_prop > nominal_prop:
+            print("Min greater than nominal detected for class:", type_name)
+            continue
+
+    print("EOF:", filename)
+
+
+def process_multi_files(filenames: [str]) -> None:
     try:
-        for filename in filenames:
-            tree = Et.parse(f"{path}{filename}")
-            root = tree.getroot()
-            type_dict: dict[str, str] = {}
-
-            for element in root:
-                is_duplicate, type_name = is_duplicate_type(element, type_dict)
-                if is_duplicate:
-                    print("Duplicate class:", type_name)
-                    continue
-
-                nominal_prop, min_prop = handle_sub_element(element)
-                if min_prop > nominal_prop:
-                    print("Min greater than nominal detected for class:", type_name)
-                    continue
-
-            print("EOF:", filename)
+        with multiprocessing.Pool() as pool:
+            pool.map(process_file, filenames)
     except Exception as e:
         print("Error:", e)
 
