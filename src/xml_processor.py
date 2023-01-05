@@ -1,77 +1,67 @@
-import multiprocessing
+import multiprocessing as mp
 import xml.etree.ElementTree as Et
 from os import listdir
 
 
-def get_filenames() -> None:
-    # if running this script via IDE
-    # path = "../data/"
-    path = "data/"
-    filenames = []
-    for f in listdir(path):
-        if ".xml" in f:
-            filenames.append(f"{path}{f}")
+class XmlProcessor:
+    XML_FILE = ".xml"
 
-    if len(filenames) == 0:
-        print("Drop xml files in the 'data' folder and try again")
-        return
+    def __init__(self, path: str):
+        self.path = path
 
-    process_multi_files(filenames)
+    def get_filenames(self) -> [str]:
+        filenames = []
+        for f in listdir(self.path):
+            if self.XML_FILE in f:
+                filenames.append(f"{self.path}{f}")
 
+        return filenames
 
-def process_file(filename: str):
-    tree = Et.parse(filename)
-    root = tree.getroot()
-    type_dict: dict[str, str] = {}
+    def process_xml_files(self, filenames: [str]) -> None:
+        try:
+            with mp.Pool(len(filenames)) as pool:
+                pool.map(self.__process_xml_file, filenames)
+        except Exception as e:
+            print("Error:", e)
 
-    for element in root:
-        is_duplicate, type_name = is_duplicate_type(element, type_dict)
-        if is_duplicate:
-            print("Duplicate class:", type_name)
-            continue
+    def __process_xml_file(self, filename: str) -> None:
+        tree = Et.parse(filename)
+        root = tree.getroot()
 
-        nominal_prop, min_prop = handle_sub_element(element)
-        if min_prop > nominal_prop:
-            print("Min greater than nominal detected for class:", type_name)
-            continue
+        self.__handle_xml_elements(root)
 
-    print("EOF:", filename)
+        print("EOF:", filename)
 
+    def __handle_xml_elements(self, xml_root):
+        class_dict: dict[str, str] = {}
+        for element in xml_root:
+            is_duplicate_class, class_name = self.__is_duplicate_class(element, class_dict)
+            if is_duplicate_class:
+                print("Duplicate class:", class_name)
+                continue
 
-def process_multi_files(filenames: [str]) -> None:
-    try:
-        with multiprocessing.Pool() as pool:
-            pool.map(process_file, filenames)
-    except Exception as e:
-        print("Error:", e)
+            self.__handle_xml_sub_elements(element, class_name)
 
+    @staticmethod
+    def __is_duplicate_class(element: Et.Element, class_dict: dict[str, str]) -> (bool, str):
+        name_attribute = element.attrib.values()
+        class_name = name_attribute.mapping["name"]
 
-def is_duplicate_type(element, type_dict) -> (bool, str):
-    type_attribute = element.attrib.values()
-    type_name = type_attribute.mapping["name"]
+        if class_name in class_dict:
+            return True, class_name
 
-    if type_name in type_dict:
-        return True, type_name
+        class_dict[class_name] = "name"
+        return False, class_name
 
-    type_dict[type_name] = "name"
-    return False, type_name
-
-
-def handle_sub_element(element) -> (int, int):
-    nominal_prop = -1
-    min_prop = -1
-    for sub_element in element:
-        if sub_element.tag == "nominal":
-            nominal_prop = int(sub_element.text)
-        if sub_element.tag == "min":
-            min_prop = int(sub_element.text)
-        if nominal_prop > -1 and min_prop > -1:
-            return nominal_prop, min_prop
-
-
-def main() -> None:
-    get_filenames()
-
-
-if __name__ == "__main__":
-    main()
+    @staticmethod
+    def __handle_xml_sub_elements(element: Et.Element, class_name: str) -> None:
+        nominal_prop = -1
+        min_prop = -1
+        for sub_element in element:
+            if sub_element.tag == "nominal":
+                nominal_prop = int(sub_element.text)
+            if sub_element.tag == "min":
+                min_prop = int(sub_element.text)
+            if nominal_prop > -1 and min_prop > -1:
+                print("Min > nominal for class:", class_name)
+                return
