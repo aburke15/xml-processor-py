@@ -19,12 +19,18 @@ class XmlProcessor:
 
     def process_xml_files(self, filenames: [str]) -> None:
         try:
+            if len(filenames) == 0:
+                print("Drop .xml files in 'data' folder and try again.")
+                return
             with mp.Pool(len(filenames)) as pool:
-                pool.map(self.__process_xml_file, filenames)
+                pool.map(self.process_xml_file, filenames)
         except Exception as e:
             print("Error:", e)
 
-    def __process_xml_file(self, filename: str) -> None:
+    def process_xml_file(self, filename: str) -> None:
+        if len(filename) == 0 or self.XML_FILE not in filename:
+            print("Drop an .xml file in the data folder and try again.")
+            return
         tree = Et.parse(filename)
         root = tree.getroot()
 
