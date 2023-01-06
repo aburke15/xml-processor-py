@@ -1,10 +1,13 @@
-from src.xml_processor import XmlProcessor
+from xml_processor import XmlProcessor
 
 
 def main():
-    processor = XmlProcessor("../data/")
+    # if running via IDE
+    # path = "../data/"
+    path = "data/"
+    processor = XmlProcessor(path)
     filenames = processor.get_filenames()
-    processor.process_xml_files(filenames)
+    processor.process_xml_file("data/test_data_type_duplicate.xml")
 
 
 if __name__ == "__main__":

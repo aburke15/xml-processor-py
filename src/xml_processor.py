@@ -19,12 +19,18 @@ class XmlProcessor:
 
     def process_xml_files(self, filenames: [str]) -> None:
         try:
+            if len(filenames) == 0:
+                print("Drop .xml files in 'data' folder and try again.")
+                return
             with mp.Pool(len(filenames)) as pool:
-                pool.map(self.__process_xml_file, filenames)
+                pool.map(self.process_xml_file, filenames)
         except Exception as e:
             print("Error:", e)
 
-    def __process_xml_file(self, filename: str) -> None:
+    def process_xml_file(self, filename: str) -> None:
+        if len(filename) == 0 or self.XML_FILE not in filename:
+            print("Drop an .xml file in the data folder and try again.")
+            return
         tree = Et.parse(filename)
         root = tree.getroot()
 
@@ -40,7 +46,9 @@ class XmlProcessor:
                 print("Duplicate class:", class_name)
                 continue
 
-            self.__handle_xml_sub_elements(element, class_name)
+            nominal_prop, min_prop = self.__handle_xml_sub_elements(element, class_name)
+            if min_prop > nominal_prop:
+                print("Min > nominal for class:", class_name)
 
     @staticmethod
     def __is_duplicate_class(element: Et.Element, class_dict: dict[str, str]) -> (bool, str):
@@ -54,7 +62,7 @@ class XmlProcessor:
         return False, class_name
 
     @staticmethod
-    def __handle_xml_sub_elements(element: Et.Element, class_name: str) -> None:
+    def __handle_xml_sub_elements(element: Et.Element, class_name: str) -> (int, int):
         nominal_prop = -1
         min_prop = -1
         for sub_element in element:
@@ -63,5 +71,4 @@ class XmlProcessor:
             if sub_element.tag == "min":
                 min_prop = int(sub_element.text)
             if nominal_prop > -1 and min_prop > -1:
-                print("Min > nominal for class:", class_name)
-                return
+                return nominal_prop, min_prop
