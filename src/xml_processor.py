@@ -46,7 +46,9 @@ class XmlProcessor:
                 print("Duplicate class:", class_name)
                 continue
 
-            self.__handle_xml_sub_elements(element, class_name)
+            nominal_prop, min_prop = self.__handle_xml_sub_elements(element, class_name)
+            if min_prop > nominal_prop:
+                print("Min > nominal for class:", class_name)
 
     @staticmethod
     def __is_duplicate_class(element: Et.Element, class_dict: dict[str, str]) -> (bool, str):
@@ -60,7 +62,7 @@ class XmlProcessor:
         return False, class_name
 
     @staticmethod
-    def __handle_xml_sub_elements(element: Et.Element, class_name: str) -> None:
+    def __handle_xml_sub_elements(element: Et.Element, class_name: str) -> (int, int):
         nominal_prop = -1
         min_prop = -1
         for sub_element in element:
@@ -69,5 +71,4 @@ class XmlProcessor:
             if sub_element.tag == "min":
                 min_prop = int(sub_element.text)
             if nominal_prop > -1 and min_prop > -1:
-                print("Min > nominal for class:", class_name)
-                return
+                return nominal_prop, min_prop
